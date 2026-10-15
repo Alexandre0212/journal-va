@@ -1,0 +1,32 @@
+# Secrets — ne jamais versionner
+.env
+.env.*
+!.env.example
+
+# Dépendances et builds
+node_modules/
+.next/
+out/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Tests
+playwright-report/
+test-results/
+blob-report/
+
+# Prisma local (npx prisma dev) — la base Paris reste dans .env
+prisma/*.db
+prisma/*.db-journal
+
+# Pièces jointes locales, hors public/
+/storage/
+
+# Outils et OS
+.netlify/
+.vercel/
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*

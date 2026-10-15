@@ -1,0 +1,14 @@
+---
+description: Règles générales du projet Journal VA
+alwaysApply: true
+---
+- Lire `AGENTS.md` et `docs/DESIGN.md` avant toute modification.
+- Next.js + Prisma + PostgreSQL. Pas de Firebase.
+- Projets autorisés : SAFYA, TRIAGE+, RacTac. EcoMoto exclu partout.
+- Interface en français ; dates en `Africa/Dakar` via `src/lib/dates.ts`.
+- TypeScript strict, pas de `any`, pas de `@ts-ignore`. Zod pour toute entrée, validée côté serveur.
+- Logique métier dans `src/domain/`, en fonctions pures testées.
+- Chaque écran : loading, empty, success, error, unauthorized.
+- `passation-journal-va/` en lecture seule.
+- Ne jamais supprimer une fonctionnalité de l'original pour simplifier le design.
+- Ne rien déclarer terminé sans `tsc --noEmit`, `eslint`, tests concernés, et sans dire ce qui n'a pas été vérifié.
