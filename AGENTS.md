@@ -29,7 +29,7 @@ SAFYA (`safya`), TRIAGE+ (`triage`), RacTac (`rpm`). Uniquement ceux-là. EcoMot
 Pas de dépendance lourde supplémentaire sans justification.
 
 ## Phase actuelle : local, sans connexion
-- Pas d'écran de connexion. L'utilisateur courant vient de `DEV_USER_ID` (`.env`), par défaut **Fatoumata Sonko, administratrice**. Sélecteur discret « Voir en tant que » visible uniquement si `AUTH_MODE=dev`.
+- Pas d'écran de connexion. L'utilisateur courant vient de `DEV_USER_ID` (`.env`), par défaut **Alexandre Sankara, administrateur**. Sélecteur discret « Voir en tant que » visible uniquement si `AUTH_MODE=dev` (Alexandre, Fatoumata Sonko, VA Test).
 - Les autorisations sont déjà vérifiées côté serveur (`requireUser()`, `requireAdmin()`). Brancher plus tard Auth.js + Microsoft Entra ID ne doit modifier que `src/server/auth/session.ts`.
 - `AUTH_MODE=dev` refusé au démarrage si `NODE_ENV=production`.
 - Une intégration non configurée affiche un état explicite, jamais un faux succès.

@@ -1,0 +1,345 @@
+// Identifiants texte d'origine conservés (safya, u_5MKSBjCyBoc8Pi6hC78kuQ, dates AAAA-MM-JJ).
+// Les dates calendaires restent des chaînes AAAA-MM-JJ pour coller aux formules du Journal.
+// Les instants sont des DateTime UTC.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["relationJoins"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  VENTURE_ARCHITECT
+}
+
+enum TaskStatus {
+  todo
+  doing
+  blocked
+  done
+}
+
+enum AnomalySeverity {
+  minor
+  major
+  blocking
+}
+
+enum AnomalyStatus {
+  open
+  resolved
+}
+
+enum MgmtStatus {
+  todo
+  doing
+  done
+}
+
+model User {
+  id        String    @id
+  email     String    @unique
+  name      String
+  role      Role
+  isTest    Boolean   @default(false)
+  joinedAt  DateTime?
+  createdAt DateTime  @default(now())
+
+  ledProjects     Project[]            @relation("ProjectLead")
+  participations  ProjectParticipant[]
+  assignedTasks   Task[]               @relation("TaskAssignee")
+  createdTasks    Task[]               @relation("TaskCreator")
+  updatedTasks    Task[]               @relation("TaskUpdater")
+  historyEntries  TaskHistory[]
+  infos           Info[]
+  courses         Course[]
+  anomalies       Anomaly[]
+  mgmtItems       MgmtItem[]
+  activity        ActivityLog[]
+}
+
+model Project {
+  id               String   @id
+  name             String
+  order            Int
+  phase            Int
+  coursesEnabled   Boolean  @default(false)
+  anomaliesEnabled Boolean  @default(false)
+  leadId           String?
+  lead             User?    @relation("ProjectLead", fields: [leadId], references: [id])
+  updatedAt        DateTime @default(now()) @updatedAt
+
+  participants ProjectParticipant[]
+  note         ProjectNote?
+  okrs         Okr[]
+  tasks        Task[]
+  kpis         Kpi[]
+  infos        Info[]
+  courses      Course[]
+  anomalies    Anomaly[]
+  meetings     MeetingProject[]
+}
+
+model ProjectParticipant {
+  projectId String
+  userId    String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, userId])
+}
+
+model ProjectNote {
+  projectId String   @id
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  hot       String?
+  sofar     String?
+  keep      String?
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model Okr {
+  id        String    @id
+  projectId String
+  project   Project   @relation(fields: [projectId], references: [id])
+  phase     Int
+  title     String
+  due       String?
+  updatedAt DateTime  @default(now()) @updatedAt
+  deletedAt DateTime?
+
+  keyResults KeyResult[]
+  tasks      Task[]
+
+  @@index([projectId, phase])
+  @@index([deletedAt])
+}
+
+model KeyResult {
+  id      String
+  okrId   String
+  okr     Okr    @relation(fields: [okrId], references: [id], onDelete: Cascade)
+  label   String
+  target  Float
+  current Float
+  unit    String @default("")
+
+  @@id([okrId, id])
+}
+
+model Task {
+  id          String     @id
+  title       String
+  projectId   String
+  project     Project    @relation(fields: [projectId], references: [id])
+  phase       Int
+  okrId       String?
+  okr         Okr?       @relation(fields: [okrId], references: [id])
+  assigneeId  String?
+  assignee    User?      @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  due         String?
+  date        String?
+  status      TaskStatus @default(todo)
+  /// Vide à l'import. low | normal | high. Null = non renseignée.
+  priority    String?
+  blocker     String?
+  createdAt   DateTime
+  createdById String?
+  createdBy   User?      @relation("TaskCreator", fields: [createdById], references: [id])
+  updatedAt   DateTime   @updatedAt
+  updatedById String?
+  updatedBy   User?      @relation("TaskUpdater", fields: [updatedById], references: [id])
+  doneAt      DateTime?
+  blockedAt   DateTime?
+  deletedAt   DateTime?
+
+  history TaskHistory[]
+
+  @@index([projectId, phase, status])
+  @@index([deletedAt])
+  @@index([date])
+}
+
+model TaskHistory {
+  id     String     @id @default(cuid())
+  taskId String
+  task   Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  at     DateTime
+  status TaskStatus
+  byId   String?
+  by     User?      @relation(fields: [byId], references: [id])
+
+  @@index([taskId, at])
+}
+
+model Kpi {
+  id        String    @id
+  projectId String
+  project   Project   @relation(fields: [projectId], references: [id])
+  label     String
+  unit      String    @default("")
+  target    Float?
+  createdAt DateTime
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  values KpiValue[]
+
+  @@index([projectId])
+  @@index([deletedAt])
+}
+
+model KpiValue {
+  kpiId String
+  kpi   Kpi    @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+  date  String
+  value Float
+
+  @@id([kpiId, date])
+}
+
+model Info {
+  id        String    @id
+  date      String
+  text      String
+  source    String?
+  channel   String
+  projectId String?
+  project   Project?  @relation(fields: [projectId], references: [id])
+  byId      String?
+  by        User?     @relation(fields: [byId], references: [id])
+  createdAt DateTime
+  deletedAt DateTime?
+
+  @@index([projectId, date])
+  @@index([deletedAt])
+}
+
+model Course {
+  id        String    @id
+  projectId String
+  project   Project   @relation(fields: [projectId], references: [id])
+  date      String
+  fromPlace String?
+  toPlace   String?
+  km        Float?
+  app       Float?
+  yango     Float?
+  liv       Float?
+  driver    String?
+  note      String?
+  byId      String?
+  by        User?     @relation(fields: [byId], references: [id])
+  createdAt DateTime
+  deletedAt DateTime?
+
+  @@index([projectId, date])
+  @@index([deletedAt])
+}
+
+model Anomaly {
+  id        String          @id
+  projectId String
+  project   Project         @relation(fields: [projectId], references: [id])
+  date      String
+  text      String
+  severity  AnomalySeverity
+  status    AnomalyStatus   @default(open)
+  byId      String?
+  by        User?           @relation(fields: [byId], references: [id])
+  createdAt DateTime
+  updatedAt DateTime        @updatedAt
+
+  file AnomalyFile?
+
+  @@index([projectId, status])
+}
+
+model AnomalyFile {
+  id           String  @id @default(cuid())
+  anomalyId    String  @unique
+  anomaly      Anomaly @relation(fields: [anomalyId], references: [id], onDelete: Cascade)
+  kind         String
+  externalId   String?
+  name         String?
+  mimeType     String?
+  /// Null quand le binaire n'a pas été récupéré.
+  storagePath  String?
+  unavailable  Boolean @default(false)
+}
+
+model MgmtItem {
+  id        String     @id
+  text      String
+  status    MgmtStatus
+  date      String
+  createdAt DateTime
+  updatedAt DateTime   @updatedAt
+  byId      String?
+  by        User?      @relation(fields: [byId], references: [id])
+
+  @@index([date])
+}
+
+model Meeting {
+  id           String   @id
+  title        String
+  date         String
+  start        String?
+  /// Noms tels qu'écrits dans le compte rendu, pas forcément des comptes.
+  participants String[]
+  cr           String
+  source       String?
+  createdAt    DateTime
+
+  projects MeetingProject[]
+  actions  MeetingAction[]
+
+  @@index([date])
+}
+
+model MeetingProject {
+  meetingId String
+  projectId String
+  meeting   Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@id([meetingId, projectId])
+}
+
+model MeetingAction {
+  id        String  @id @default(cuid())
+  meetingId String
+  meeting   Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  text      String
+  taskId    String?
+}
+
+model Summary {
+  id          String    @id
+  date        String    @unique
+  text        String
+  generatedAt DateTime?
+  /// true si le texte vient de l'export, false s'il a été recalculé ici.
+  imported    Boolean   @default(true)
+}
+
+model ActivityLog {
+  id       String   @id @default(cuid())
+  at       DateTime @default(now())
+  actorId  String?
+  actor    User?    @relation(fields: [actorId], references: [id])
+  entity   String
+  entityId String
+  field    String?
+  before   String?
+  after    String?
+
+  @@index([entity, entityId])
+  @@index([at])
+}
