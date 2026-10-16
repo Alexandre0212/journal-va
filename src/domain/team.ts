@@ -1,5 +1,9 @@
 export type MemberRole = "ADMIN" | "VENTURE_ARCHITECT";
 
+export function assignableMembers<T extends { isTest: boolean }>(members: readonly T[]): T[] {
+  return members.filter((member) => !member.isTest);
+}
+
 const PREFERRED_INITIALS: Record<string, string> = {
   "ben diop": "BD",
   "fatoumata bintou sonko": "FS",

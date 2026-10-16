@@ -10,6 +10,7 @@ import { TaskFiltersToolbar } from "@/features/task-filters-toolbar";
 import { toast } from "sonner";
 import { Logo } from "@/components/logo";
 import { PHASES, PROJECT_LOGOS } from "@/domain/phases";
+import { assignableMembers } from "@/domain/team";
 import { shiftDay } from "@/lib/dates";
 import { moveTask, saveTask, softDelete } from "@/server/actions";
 
@@ -34,7 +35,7 @@ export type BoardTask = {
 export type BoardMeta = {
   projects: Array<{ id: string; name: string; phase: number }>;
   okrs: Array<{ id: string; title: string; projectId: string; phase: number }>;
-  users: Array<{ id: string; name: string }>;
+  users: Array<{ id: string; name: string; isTest: boolean }>;
 };
 
 const COLS = [
@@ -194,7 +195,9 @@ export function TaskBoard({ tasks, meta, today, createPhase, heading }: { tasks:
               const result = await saveTask({ ...payload, id: selected.id });
               setSaving(false);
               if (!result.ok) { setError(result.error); toast.error(result.error); return; }
-              const assignee = meta.users.find((user) => user.id === payload.assigneeId)?.name ?? null;
+              const assignee = payload.assigneeId
+                ? (assignableMembers(meta.users).find((user) => user.id === payload.assigneeId)?.name ?? (payload.assigneeId === selected.assigneeId ? selected.assignee : null))
+                : null;
               const okrTitle = meta.okrs.find((okr) => okr.id === payload.okrId)?.title ?? null;
               const projectName = meta.projects.find((project) => project.id === payload.projectId)?.name ?? selected.projectName;
               setItems(items.map((item) => item.id === selected.id ? { ...item, ...payload, assignee, okrTitle, projectName, late: Boolean(payload.due && payload.due < today && payload.status !== "done") } : item));
@@ -381,7 +384,10 @@ function TaskForm({ meta, task, createPhase, saving, error, onDirty, onSubmit }:
   const [projectId, setProjectId] = useState(task?.projectId ?? meta.projects[0]?.id ?? "");
   const [phase, setPhase] = useState(task?.phase ?? createPhase ?? meta.projects[0]?.phase ?? 0);
   const [status, setStatus] = useState<BoardTask["status"]>(task?.status ?? "todo");
+  const roster = assignableMembers(meta.users);
   const choices = meta.okrs.filter((okr) => okr.projectId === projectId && okr.phase === phase);
+  const keptAssignee = task?.assigneeId && !roster.some((user) => user.id === task.assigneeId) ? task.assigneeId : null;
+  const [assigneeId, setAssigneeId] = useState(keptAssignee ?? task?.assigneeId ?? "");
   return (
     <form className="flex flex-col gap-3" onChange={onDirty} onSubmit={(event) => {
       event.preventDefault();
@@ -393,7 +399,7 @@ function TaskForm({ meta, task, createPhase, saving, error, onDirty, onSubmit }:
         projectId,
         phase,
         okrId: String(data.get("okrId") ?? "") || null,
-        assigneeId: String(data.get("assigneeId") ?? "") || null,
+        assigneeId: assigneeId || null,
         due: String(data.get("due") ?? "") || null,
         date: task?.date ?? null,
         status,
@@ -415,7 +421,11 @@ function TaskForm({ meta, task, createPhase, saving, error, onDirty, onSubmit }:
           <select name="okrId" className="control" defaultValue={task?.okrId ?? ""}><option value="">Aucun OKR</option>{choices.map((okr) => <option key={okr.id} value={okr.id}>{okr.title}</option>)}</select>
         </label>
         <label className="field"><span>Responsable</span>
-          <select name="assigneeId" className="control" defaultValue={task?.assigneeId ?? ""}><option value="">Non attribuée</option>{meta.users.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select>
+          <select className="control" value={keptAssignee && assigneeId === keptAssignee ? "__keep__" : assigneeId} onChange={(event) => setAssigneeId(event.target.value === "__keep__" ? keptAssignee ?? "" : event.target.value)}>
+            <option value="">Non attribuée</option>
+            {keptAssignee && assigneeId === keptAssignee ? <option value="__keep__">Responsable déjà enregistré</option> : null}
+            {roster.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}
+          </select>
         </label>
         <label className="field"><span>Échéance</span><input type="date" name="due" className="control" defaultValue={task?.due ?? ""} /></label>
         <label className="field"><span>Priorité</span>

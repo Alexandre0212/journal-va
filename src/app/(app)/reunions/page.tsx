@@ -22,7 +22,7 @@ export default async function MeetingsPage() {
         canWrite={user.role === "ADMIN"}
         today={todayISO()}
         minutesNow={minutesNow()}
-        people={users.map((person) => ({ id: person.id, name: person.name }))}
+        people={users.map((person) => ({ id: person.id, name: person.name, isTest: person.isTest }))}
         projects={allowed.map((project) => ({ id: project.id, name: project.name, phase: project.phase }))}
         tasks={tasks.map((task) => ({
           id: task.id,

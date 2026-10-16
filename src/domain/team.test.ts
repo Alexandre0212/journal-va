@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { memberInitials, memberRoleChangeError, teamHeadline } from "@/domain/team";
+import { assignableMembers, memberInitials, memberRoleChangeError, teamHeadline } from "@/domain/team";
 
 describe("équipe", () => {
+  it("retire le compte de test des responsables proposés", () => {
+    const members = assignableMembers([
+      { id: "u_ben", name: "Ben Diop", isTest: false },
+      { id: "u_va_test", name: "VA Test", isTest: true },
+      { id: "u_elias", name: "Elias Bâ", isTest: false },
+    ]);
+    expect(members.map((member) => member.id)).toEqual(["u_ben", "u_elias"]);
+  });
+
   it("calcule des initiales stables", () => {
     expect(memberInitials("Ben Diop")).toBe("BD");
     expect(memberInitials("Fatoumata Bintou Sonko")).toBe("FS");

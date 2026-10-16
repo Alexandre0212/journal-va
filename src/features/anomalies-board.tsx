@@ -8,6 +8,7 @@ import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { Logo } from "@/components/logo";
 import { anomalyBoardCounts, type AnomalySeverity, type AnomalyStatus } from "@/domain/anomalies";
+import { assignableMembers } from "@/domain/team";
 import { PROJECT_LOGOS } from "@/domain/phases";
 import { formatDay, formatTime } from "@/lib/dates";
 import { addAnomalyComment, assignAnomaly, saveAnomaly, setAnomalyStatus, updateAnomaly } from "@/server/actions";
@@ -29,6 +30,7 @@ export type AnomalyItem = {
 };
 
 type Person = { id: string; name: string };
+type Member = Person & { isTest: boolean };
 type ProjectOption = { id: string; name: string; enabled: boolean };
 
 const SEVERITY = {
@@ -60,10 +62,11 @@ export function AnomaliesBoard({
 }: {
   anomalies: AnomalyItem[];
   projects: ProjectOption[];
-  users: Person[];
+  users: Member[];
   actor: Person;
   today: string;
 }) {
+  const roster = assignableMembers(users);
   const router = useRouter();
   const [items, setItems] = useState(anomalies);
   const [synced, setSynced] = useState(anomalies);
@@ -212,7 +215,7 @@ export function AnomaliesBoard({
             key={selected.id}
             item={selected}
             projectName={names.get(selected.projectId) ?? selected.projectId}
-            users={users}
+            users={roster}
             actor={actor}
             hidden={!selectedVisible}
             onEdit={() => setEditingId(selected.id)}
@@ -238,7 +241,7 @@ export function AnomaliesBoard({
       </div>
 
       {selected && narrow && sheet ? (
-        <DetailSheet key={selected.id} item={selected} projectName={names.get(selected.projectId) ?? selected.projectId} users={users} actor={actor} hidden={!selectedVisible} onClose={() => setSheet(false)} onEdit={() => setEditingId(selected.id)} onStatus={(next) => changeStatus(selected.id, next)} onAssigned={(assigneeId, assignee) => {
+        <DetailSheet key={selected.id} item={selected} projectName={names.get(selected.projectId) ?? selected.projectId} users={roster} actor={actor} hidden={!selectedVisible} onClose={() => setSheet(false)} onEdit={() => setEditingId(selected.id)} onStatus={(next) => changeStatus(selected.id, next)} onAssigned={(assigneeId, assignee) => {
           const previous = items;
           setItems(previous.map((item) => item.id === selected.id ? { ...item, assigneeId, assignee } : item));
           void assignAnomaly(selected.id, assigneeId).then((result) => {
@@ -260,7 +263,7 @@ export function AnomaliesBoard({
           key={editing.id}
           item={editing}
           projects={projects}
-          users={users}
+          users={roster}
           onClose={() => setEditingId(null)}
           onSaved={(next) => {
             const following = items.map((item) => item.id === next.id ? next : item);
@@ -592,7 +595,7 @@ function EditDrawer({
     void updateAnomaly(data).then((result) => {
       setPending(false);
       if (!result.ok) { setError(result.error); toast.error(result.error); return; }
-      const assignee = users.find((member) => member.id === assigneeId)?.name ?? null;
+      const assignee = users.find((member) => member.id === assigneeId)?.name ?? (assigneeId === item.assigneeId ? item.assignee : null);
       onSaved({
         ...item,
         projectId,
@@ -648,8 +651,9 @@ function EditDrawer({
               </div>
             </fieldset>
             <label className="field"><span>Personne assignée</span>
-              <select className="control" value={assigneeId} onChange={(event) => setAssigneeId(event.target.value)}>
+              <select className="control" value={assigneeId && !users.some((member) => member.id === assigneeId) ? "__keep__" : assigneeId} onChange={(event) => setAssigneeId(event.target.value === "__keep__" ? item.assigneeId ?? "" : event.target.value)}>
                 <option value="">Non assignée</option>
+                {assigneeId && !users.some((member) => member.id === assigneeId) ? <option value="__keep__">Responsable déjà enregistré</option> : null}
                 {users.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}
               </select>
             </label>

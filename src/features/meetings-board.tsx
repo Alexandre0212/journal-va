@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { MarkdownView } from "@/components/markdown-view";
 import { parseMarkdown } from "@/domain/markdown";
 import { meetingTiming } from "@/domain/meetings";
+import { assignableMembers } from "@/domain/team";
 import { FollowUp } from "@/features/forms";
 import { formatDayLong, TIMEZONE } from "@/lib/dates";
 import { saveMeeting } from "@/server/actions";
@@ -35,7 +36,7 @@ export type MeetingCard = {
 };
 
 type ProjectOption = { id: string; name: string; phase: number };
-type Person = { id: string; name: string };
+type Person = { id: string; name: string; isTest: boolean };
 type ViewTab = "overview" | "people" | "report" | "actions";
 type EditTab = "info" | "people" | "report" | "tasks";
 
@@ -622,7 +623,7 @@ function PeopleEditor({ people, participants, extra, onExtra, onAdd, onRemove }:
   onAdd: (name: string) => void;
   onRemove: (name: string) => void;
 }) {
-  const available = people.filter((person) => !participants.includes(person.name));
+  const available = assignableMembers(people).filter((person) => !participants.includes(person.name));
   return (
     <section className="meet-block">
       <h3><span className="meet-mark meet-mark-warm"><Users size={16} aria-hidden /></span> Participants</h3>

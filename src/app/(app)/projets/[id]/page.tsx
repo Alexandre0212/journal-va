@@ -126,7 +126,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           tasks={board}
           today={today}
           createPhase={phase}
-          meta={{ projects: [{ id: project.id, name: project.name, phase: project.phase }], okrs: project.okrs.map((okr) => ({ id: okr.id, title: okr.title, projectId: okr.projectId, phase: okr.phase })), users: users.map((person) => ({ id: person.id, name: person.name })) }}
+          meta={{ projects: [{ id: project.id, name: project.name, phase: project.phase }], okrs: project.okrs.map((okr) => ({ id: okr.id, title: okr.title, projectId: okr.projectId, phase: okr.phase })), users: users.map((person) => ({ id: person.id, name: person.name, isTest: person.isTest })) }}
         />
       </section>
       <section className="fiche-split">

@@ -39,7 +39,7 @@ export default async function TasksPage() {
         key={board.map((task) => task.id).join(",")}
         tasks={board}
         today={today}
-        meta={{ projects: projects.map((project) => ({ id: project.id, name: project.name, phase: project.phase })), okrs, users: users.map((user) => ({ id: user.id, name: user.name })) }}
+        meta={{ projects: projects.map((project) => ({ id: project.id, name: project.name, phase: project.phase })), okrs, users: users.map((user) => ({ id: user.id, name: user.name, isTest: user.isTest })) }}
       />
     </div>
   );

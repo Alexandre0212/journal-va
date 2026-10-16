@@ -14,7 +14,7 @@ export default async function AnomaliesPage() {
       <AnomaliesBoard
         today={todayISO()}
         actor={{ id: user.id, name: user.name }}
-        users={users.map((member) => ({ id: member.id, name: member.name }))}
+        users={users.map((member) => ({ id: member.id, name: member.name, isTest: member.isTest }))}
         projects={allowed.map((project) => ({ id: project.id, name: project.name, enabled: project.anomaliesEnabled }))}
         anomalies={anomalies.filter((item) => ALLOWED.has(item.projectId)).map((item) => ({
           id: item.id,
