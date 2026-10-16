@@ -78,6 +78,39 @@ export const anomalyWriteSchema = z.object({
   severity: z.enum(["minor", "major", "blocking"]),
 });
 
+export const anomalyStatusSchema = z.enum(["open", "progress", "resolved"]);
+
+export const anomalyUpdateSchema = z.object({
+  id: z.string().min(1),
+  projectId: z.string().min(1),
+  text: z.string().trim().min(1).max(300),
+  severity: z.enum(["minor", "major", "blocking"]),
+  status: anomalyStatusSchema,
+  assigneeId: z.string().min(1).nullable(),
+  fileAction: z.enum(["keep", "remove", "replace"]),
+});
+
+export const anomalyCommentSchema = z.string().trim().min(1).max(1000);
+
+export const memberRoleSchema = z.enum(["ADMIN", "VENTURE_ARCHITECT"]);
+
+export const memberWriteSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  email: z.string().trim().email().max(120),
+  title: z.string().trim().min(2).max(80),
+  role: memberRoleSchema,
+});
+
+export const memberUpdateSchema = memberWriteSchema.extend({
+  id: z.string().min(1),
+  active: z.boolean(),
+});
+
+export const projectPhaseChangeSchema = z.object({
+  id: z.string().min(1),
+  phase: phaseSchema,
+});
+
 export const projectWriteSchema = z.object({
   id: z.string().min(1),
   name: z.string().trim().min(1).max(80),
@@ -115,4 +148,11 @@ export const moveTaskSchema = z.object({
   id: z.string().min(1),
   status: statusSchema,
   blocker: z.string().trim().max(600).nullable(),
+});
+
+export const trashEntitySchema = z.enum(["task", "okr", "kpi", "info", "course"]);
+
+export const trashItemSchema = z.object({
+  entity: trashEntitySchema,
+  id: z.string().trim().min(1),
 });

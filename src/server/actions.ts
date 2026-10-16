@@ -1,14 +1,20 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
+import { anomalyFieldChanges } from "@/domain/anomalies";
+import { memberRoleChangeError } from "@/domain/team";
 import { buildSummary, type SummaryFacts } from "@/domain/summary";
 import {
+  anomalyCommentSchema,
+  anomalyStatusSchema,
+  anomalyUpdateSchema,
   anomalyWriteSchema,
+  memberUpdateSchema,
+  memberWriteSchema,
   courseWriteSchema,
   infoWriteSchema,
   kpiValueSchema,
@@ -18,16 +24,20 @@ import {
   moveTaskSchema,
   notesWriteSchema,
   okrWriteSchema,
+  projectPhaseChangeSchema,
   projectWriteSchema,
   taskWriteSchema,
 } from "@/domain/schemas";
-import { canDeleteInfo, canToggleProjectModules } from "@/domain/permissions";
+import { canDeleteInfo, canEditProject, canWriteCollection } from "@/domain/permissions";
+import { projectFieldChanges } from "@/domain/projects";
+import { trashItemSchema } from "@/domain/schemas";
 import { stamp } from "@/domain/tasks";
 import { todayISO } from "@/lib/dates";
 import { setDevActor } from "@/server/auth/session";
 import { logActivity } from "@/server/activity";
 import { requireAdmin, requireUser } from "@/server/auth/session";
 import { prisma } from "@/server/db";
+import { destroyDeletedItem, restoreDeletedItem } from "@/server/trash";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -219,15 +229,24 @@ export async function softDelete(entity: "task" | "okr" | "kpi" | "info" | "cour
 export async function restoreItem(entity: "task" | "okr" | "kpi" | "info" | "course", id: string): Promise<ActionResult> {
   try {
     const user = await requireUser();
-    await prisma.$transaction(async (tx) => {
-      const data = { deletedAt: null };
-      if (entity === "task") await tx.task.update({ where: { id }, data });
-      else if (entity === "okr") await tx.okr.update({ where: { id }, data });
-      else if (entity === "kpi") await tx.kpi.update({ where: { id }, data });
-      else if (entity === "info") await tx.info.update({ where: { id }, data });
-      else await tx.course.update({ where: { id }, data });
-      await logActivity(tx, { actorId: user.id, entity, entityId: id, field: "deletedAt", after: null });
-    });
+    const parsed = trashItemSchema.parse({ entity, id });
+    const result = await restoreDeletedItem(user.id, parsed.entity, parsed.id);
+    if (result === "missing") return { ok: false, error: "Élément introuvable." };
+    if (result === "expired") return { ok: false, error: "Le délai de 30 jours est dépassé. L'élément ne peut plus être restauré." };
+    refresh();
+    return { ok: true };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function purgeTrashItem(entity: unknown, id: unknown): Promise<ActionResult> {
+  try {
+    const user = await requireUser();
+    const parsed = trashItemSchema.parse({ entity, id });
+    const result = await destroyDeletedItem({ id: user.id, role: user.role }, parsed.entity, parsed.id);
+    if (result === "missing") return { ok: false, error: "Élément introuvable." };
+    if (result === "forbidden") return { ok: false, error: "Vous ne pouvez pas supprimer définitivement cette info." };
     refresh();
     return { ok: true };
   } catch (error) {
@@ -246,10 +265,15 @@ export async function saveOkr(input: unknown): Promise<ActionResult> {
         update: { projectId: data.projectId, phase: data.phase, title: data.title, due: data.due },
         create: { id, projectId: data.projectId, phase: data.phase, title: data.title, due: data.due },
       });
-      await tx.keyResult.deleteMany({ where: { okrId: id } });
-      if (data.keyResults.length) {
-        await tx.keyResult.createMany({
-          data: data.keyResults.map((kr) => ({ ...kr, okrId: id })),
+      const keep = data.keyResults.map((kr) => kr.id);
+      await tx.keyResult.deleteMany({
+        where: keep.length ? { okrId: id, id: { notIn: keep } } : { okrId: id },
+      });
+      for (const kr of data.keyResults) {
+        await tx.keyResult.upsert({
+          where: { okrId_id: { okrId: id, id: kr.id } },
+          update: { label: kr.label, target: kr.target, current: kr.current, unit: kr.unit },
+          create: { ...kr, okrId: id },
         });
       }
       await logActivity(tx, { actorId: user.id, entity: "okr", entityId: id, field: "title", after: data.title });
@@ -395,6 +419,7 @@ export async function saveAnomaly(formData: FormData): Promise<ActionResult> {
           : undefined,
       },
     });
+    await prisma.activityLog.create({ data: { actorId: user.id, entity: "anomaly", entityId: id, field: "text", after: parsed.text } });
     refresh();
     return { ok: true };
   } catch (error) {
@@ -402,11 +427,155 @@ export async function saveAnomaly(formData: FormData): Promise<ActionResult> {
   }
 }
 
-export async function setAnomalyStatus(id: string, status: "open" | "resolved"): Promise<ActionResult> {
+export async function setAnomalyStatus(id: string, status: "open" | "progress" | "resolved"): Promise<ActionResult> {
   try {
     const user = await requireUser();
-    await prisma.anomaly.update({ where: { id }, data: { status } });
-    await prisma.activityLog.create({ data: { actorId: user.id, entity: "anomaly", entityId: id, field: "status", after: status } });
+    const next = anomalyStatusSchema.safeParse(status);
+    if (!id || !next.success) return { ok: false, error: "Statut invalide." };
+    const current = await prisma.anomaly.findUnique({ where: { id } });
+    if (!current) return { ok: false, error: "Anomalie introuvable." };
+    if (current.status === next.data) return { ok: true };
+    await prisma.anomaly.update({ where: { id }, data: { status: next.data } });
+    await prisma.activityLog.create({ data: { actorId: user.id, entity: "anomaly", entityId: id, field: "status", before: current.status, after: next.data } });
+    refresh();
+    return { ok: true };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function assignAnomaly(id: string, assigneeId: string | null): Promise<ActionResult> {
+  try {
+    const user = await requireUser();
+    const current = await prisma.anomaly.findUnique({ where: { id } });
+    if (!current) return { ok: false, error: "Anomalie introuvable." };
+    if (assigneeId) {
+      const member = await prisma.user.findUnique({ where: { id: assigneeId } });
+      if (!member) return { ok: false, error: "Ce membre n'existe pas." };
+    }
+    await prisma.anomaly.update({ where: { id }, data: { assigneeId } });
+    await prisma.activityLog.create({ data: { actorId: user.id, entity: "anomaly", entityId: id, field: "assignee", before: current.assigneeId, after: assigneeId } });
+    refresh();
+    return { ok: true };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+const ANOMALY_PROJECTS = new Set(["safya", "triage", "rpm"]);
+
+async function storeAnomalyUpload(id: string, file: File) {
+  if (!ALLOWED_MIME.has(file.type)) return { ok: false as const, error: "Type de fichier non accepté." };
+  if (file.size > 8_000_000) return { ok: false as const, error: "Fichier trop lourd (8 Mo maximum)." };
+  const dir = path.join(process.cwd(), "storage", "anomalies");
+  await mkdir(dir, { recursive: true });
+  const storagePath = path.join(dir, `${id}-${Date.now()}-${file.name.replace(/[^\w.\-]+/g, "_")}`);
+  await writeFile(storagePath, Buffer.from(await file.arrayBuffer()));
+  return { ok: true as const, name: file.name, mimeType: file.type, storagePath };
+}
+
+async function discardStoredFile(storagePath: string | null | undefined) {
+  if (!storagePath) return;
+  const root = path.resolve(process.cwd(), "storage", "anomalies");
+  const resolved = path.resolve(storagePath);
+  if (resolved !== root && resolved.startsWith(`${root}${path.sep}`)) await rm(resolved, { force: true });
+}
+
+export async function updateAnomaly(formData: FormData): Promise<ActionResult> {
+  try {
+    const user = await requireUser();
+    if (!canWriteCollection(user.role, "anomalies")) return { ok: false, error: "Vous ne pouvez pas modifier cette anomalie." };
+    const assigneeRaw = formData.get("assigneeId");
+    const parsed = anomalyUpdateSchema.safeParse({
+      id: formData.get("id"),
+      projectId: formData.get("projectId"),
+      text: formData.get("text"),
+      severity: formData.get("severity"),
+      status: formData.get("status"),
+      assigneeId: typeof assigneeRaw === "string" && assigneeRaw.length > 0 ? assigneeRaw : null,
+      fileAction: formData.get("fileAction"),
+    });
+    if (!parsed.success) return { ok: false, error: "Vérifiez les champs de l'anomalie." };
+    if (!ANOMALY_PROJECTS.has(parsed.data.projectId)) return { ok: false, error: "Projet non autorisé." };
+    const current = await prisma.anomaly.findUnique({ where: { id: parsed.data.id }, include: { file: true } });
+    if (!current) return { ok: false, error: "Anomalie introuvable." };
+    const project = await prisma.project.findUnique({ where: { id: parsed.data.projectId } });
+    if (!project?.anomaliesEnabled) return { ok: false, error: "Les anomalies ne sont pas activées sur ce projet." };
+    if (parsed.data.assigneeId) {
+      const member = await prisma.user.findUnique({ where: { id: parsed.data.assigneeId } });
+      if (!member) return { ok: false, error: "Ce membre n'existe pas." };
+    }
+    const upload = formData.get("file");
+    const changes = anomalyFieldChanges(current, parsed.data);
+    const fileUntouched = parsed.data.fileAction === "keep" || (parsed.data.fileAction === "remove" && !current.file);
+    if (changes.length === 0 && fileUntouched) return { ok: true };
+    let replacement: { ok: true; name: string; mimeType: string; storagePath: string } | null = null;
+    if (parsed.data.fileAction === "replace") {
+      if (!(upload instanceof File) || upload.size === 0) return { ok: false, error: "Choisissez un fichier à ajouter." };
+      const stored = await storeAnomalyUpload(parsed.data.id, upload);
+      if (!stored.ok) return stored;
+      replacement = stored;
+    }
+    const previousPath = current.file?.storagePath;
+    try {
+    await prisma.$transaction(async (tx) => {
+      await tx.anomaly.update({
+        where: { id: current.id },
+        data: {
+          projectId: parsed.data.projectId,
+          text: parsed.data.text,
+          severity: parsed.data.severity,
+          status: parsed.data.status,
+          assigneeId: parsed.data.assigneeId,
+        },
+      });
+      if (parsed.data.fileAction === "remove" && current.file) {
+        await tx.anomalyFile.delete({ where: { id: current.file.id } });
+      }
+      if (parsed.data.fileAction === "replace" && replacement?.ok) {
+        if (current.file) await tx.anomalyFile.delete({ where: { id: current.file.id } });
+        await tx.anomalyFile.create({
+          data: {
+            anomalyId: current.id,
+            kind: "asset",
+            name: replacement.name,
+            mimeType: replacement.mimeType,
+            storagePath: replacement.storagePath,
+            unavailable: false,
+          },
+        });
+      }
+      for (const change of changes) {
+        await logActivity(tx, { actorId: user.id, entity: "anomaly", entityId: current.id, field: change.field, before: change.before, after: change.after });
+      }
+      if (parsed.data.fileAction === "remove" && current.file) {
+        await logActivity(tx, { actorId: user.id, entity: "anomaly", entityId: current.id, field: "file", before: current.file.name, after: null });
+      }
+      if (parsed.data.fileAction === "replace" && replacement?.ok) {
+        await logActivity(tx, { actorId: user.id, entity: "anomaly", entityId: current.id, field: "file", before: current.file?.name ?? null, after: replacement.name });
+      }
+    });
+    } catch (error) {
+      if (replacement) await discardStoredFile(replacement.storagePath);
+      throw error;
+    }
+    if ((parsed.data.fileAction === "remove" || parsed.data.fileAction === "replace") && previousPath) await discardStoredFile(previousPath);
+    refresh();
+    return { ok: true };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function addAnomalyComment(id: string, body: string): Promise<ActionResult> {
+  try {
+    const user = await requireUser();
+    const text = anomalyCommentSchema.safeParse(body);
+    if (!text.success) return { ok: false, error: "Le commentaire doit contenir entre 1 et 1 000 caractères." };
+    const current = await prisma.anomaly.findUnique({ where: { id } });
+    if (!current) return { ok: false, error: "Anomalie introuvable." };
+    await prisma.anomalyComment.create({ data: { anomalyId: id, authorId: user.id, body: text.data } });
+    await prisma.activityLog.create({ data: { actorId: user.id, entity: "anomaly", entityId: id, field: "comment", after: text.data } });
     refresh();
     return { ok: true };
   } catch (error) {
@@ -417,13 +586,35 @@ export async function setAnomalyStatus(id: string, status: "open" | "resolved"):
 export async function saveProject(input: unknown): Promise<ActionResult> {
   try {
     const user = await requireUser();
-    const data = projectWriteSchema.parse(input);
-    if (!canToggleProjectModules(user.role)) {
-      const current = await prisma.project.findUnique({ where: { id: data.id } });
-      if (!current) return { ok: false, error: "Projet introuvable." };
-      if (current.coursesEnabled !== data.coursesEnabled || current.anomaliesEnabled !== data.anomaliesEnabled) {
-        return { ok: false, error: "Seul un administrateur active ces modules." };
-      }
+    if (!canEditProject(user.role)) return { ok: false, error: "Vous ne pouvez pas modifier ce projet." };
+    const parsed = projectWriteSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: "Vérifiez les champs du projet." };
+    const data = parsed.data;
+    const participantIds = [...new Set(data.participantIds.filter(Boolean))];
+    const current = await prisma.project.findUnique({
+      where: { id: data.id },
+      include: { participants: { select: { userId: true } } },
+    });
+    if (!current) return { ok: false, error: "Projet introuvable." };
+    const memberIds = [...new Set([...(data.leadId ? [data.leadId] : []), ...participantIds])];
+    if (memberIds.length) {
+      const found = await prisma.user.findMany({ where: { id: { in: memberIds } }, select: { id: true } });
+      if (found.length !== memberIds.length) return { ok: false, error: "Un membre indiqué n'existe pas." };
+    }
+    const changes = projectFieldChanges(
+      {
+        name: current.name,
+        phase: current.phase,
+        coursesEnabled: current.coursesEnabled,
+        anomaliesEnabled: current.anomaliesEnabled,
+        leadId: current.leadId,
+        participantIds: current.participants.map((item) => item.userId),
+      },
+      { ...data, participantIds },
+    );
+    if (!changes.length) {
+      refresh();
+      return { ok: true };
     }
     await prisma.$transaction(async (tx) => {
       await tx.project.update({
@@ -437,12 +628,40 @@ export async function saveProject(input: unknown): Promise<ActionResult> {
         },
       });
       await tx.projectParticipant.deleteMany({ where: { projectId: data.id } });
-      if (data.participantIds.length) {
+      if (participantIds.length) {
         await tx.projectParticipant.createMany({
-          data: data.participantIds.map((userId) => ({ projectId: data.id, userId })),
+          data: participantIds.map((userId) => ({ projectId: data.id, userId })),
         });
       }
-      await logActivity(tx, { actorId: user.id, entity: "project", entityId: data.id, field: "phase", after: String(data.phase) });
+      for (const change of changes) {
+        await logActivity(tx, { actorId: user.id, entity: "project", entityId: data.id, field: change.field, before: change.before, after: change.after });
+      }
+    });
+    refresh();
+    return { ok: true };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function setProjectPhase(input: unknown): Promise<ActionResult> {
+  try {
+    const user = await requireUser();
+    const parsed = projectPhaseChangeSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: "Phase invalide." };
+    const current = await prisma.project.findUnique({ where: { id: parsed.data.id }, select: { phase: true } });
+    if (!current) return { ok: false, error: "Projet introuvable." };
+    if (current.phase === parsed.data.phase) return { ok: true };
+    await prisma.$transaction(async (tx) => {
+      await tx.project.update({ where: { id: parsed.data.id }, data: { phase: parsed.data.phase } });
+      await logActivity(tx, {
+        actorId: user.id,
+        entity: "project",
+        entityId: parsed.data.id,
+        field: "phase",
+        before: String(current.phase),
+        after: String(parsed.data.phase),
+      });
     });
     refresh();
     return { ok: true };
@@ -600,7 +819,118 @@ export async function generateSummary(day: string): Promise<ActionResult> {
   }
 }
 
-export async function goToProject(id: string) {
-  await requireUser();
-  redirect(`/projets/${id}`);
+async function memberGuard(actorId: string, memberId: string, nextActive: boolean, nextRole: "ADMIN" | "VENTURE_ARCHITECT") {
+  const admins = await prisma.user.findMany({ where: { role: "ADMIN", isTest: false }, select: { id: true, active: true } });
+  return memberRoleChangeError({ actorId, memberId, nextActive, nextRole, admins });
+}
+
+export async function inviteMember(input: unknown): Promise<ActionResult> {
+  try {
+    const user = await requireAdmin();
+    const parsed = memberWriteSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: "Vérifiez le nom, l'e-mail et le poste." };
+    const data = parsed.data;
+    const email = data.email.toLowerCase();
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) return { ok: false, error: "Cet e-mail est déjà utilisé." };
+    const last = await prisma.user.aggregate({ _max: { sortOrder: true } });
+    const id = `u_${randomUUID()}`;
+    await prisma.user.create({
+      data: {
+        id,
+        name: data.name,
+        email,
+        title: data.title,
+        role: data.role,
+        active: true,
+        isTest: false,
+        sortOrder: (last._max.sortOrder ?? 0) + 1,
+      },
+    });
+    await prisma.activityLog.create({ data: { actorId: user.id, entity: "user", entityId: id, field: "invite", after: data.name } });
+    refresh();
+    return { ok: true };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function updateMember(input: unknown): Promise<ActionResult> {
+  try {
+    const user = await requireAdmin();
+    const parsed = memberUpdateSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: "Vérifiez le nom, l'e-mail et le poste." };
+    const data = parsed.data;
+    const current = await prisma.user.findUnique({ where: { id: data.id } });
+    if (!current || current.isTest) return { ok: false, error: "Membre introuvable." };
+    const email = data.email.toLowerCase();
+    const duplicate = await prisma.user.findFirst({ where: { email, NOT: { id: data.id } } });
+    if (duplicate) return { ok: false, error: "Cet e-mail est déjà utilisé." };
+    const blocked = await memberGuard(user.id, data.id, data.active, data.role);
+    if (blocked) return { ok: false, error: blocked };
+    await prisma.user.update({
+      where: { id: data.id },
+      data: { name: data.name, email, title: data.title, role: data.role, active: data.active },
+    });
+    await prisma.activityLog.create({ data: { actorId: user.id, entity: "user", entityId: data.id, field: "profile", before: current.name, after: data.name } });
+    refresh();
+    return { ok: true };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function setMemberActive(id: string, active: boolean): Promise<ActionResult> {
+  try {
+    const user = await requireAdmin();
+    const current = await prisma.user.findUnique({ where: { id } });
+    if (!current || current.isTest) return { ok: false, error: "Membre introuvable." };
+    const blocked = await memberGuard(user.id, id, active, current.role);
+    if (blocked) return { ok: false, error: blocked };
+    await prisma.user.update({ where: { id }, data: { active } });
+    await prisma.activityLog.create({ data: { actorId: user.id, entity: "user", entityId: id, field: "active", before: String(current.active), after: String(active) } });
+    refresh();
+    return { ok: true };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function removeMember(id: string): Promise<ActionResult> {
+  try {
+    const user = await requireAdmin();
+    if (user.id === id) return { ok: false, error: "Vous ne pouvez pas supprimer votre propre compte." };
+    const current = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: {
+            ledProjects: true,
+            participations: true,
+            assignedTasks: true,
+            createdTasks: true,
+            updatedTasks: true,
+            historyEntries: true,
+            infos: true,
+            courses: true,
+            anomalies: true,
+            assignedAnomalies: true,
+            anomalyComments: true,
+            mgmtItems: true,
+            activity: true,
+          },
+        },
+      },
+    });
+    if (!current || current.isTest) return { ok: false, error: "Membre introuvable." };
+    const linked = Object.values(current._count).some((count) => count > 0);
+    if (linked) return { ok: false, error: "Ce membre est lié à des données du studio. Désactivez-le plutôt." };
+    const blocked = await memberGuard(user.id, id, false, current.role);
+    if (blocked) return { ok: false, error: blocked };
+    await prisma.user.delete({ where: { id } });
+    refresh();
+    return { ok: true };
+  } catch (error) {
+    return fail(error);
+  }
 }

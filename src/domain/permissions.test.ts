@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canDeleteInfo, canEditNotes, canWriteCollection } from "@/domain/permissions";
+import { canDeleteInfo, canEditNotes, canEditProject, canWriteCollection } from "@/domain/permissions";
 
 describe("permissions", () => {
   it("réserve notes et récaps aux administrateurs", () => {
@@ -7,6 +7,11 @@ describe("permissions", () => {
     expect(canEditNotes("VENTURE_ARCHITECT")).toBe(false);
     expect(canWriteCollection("VENTURE_ARCHITECT", "tasks")).toBe(true);
     expect(canWriteCollection("VENTURE_ARCHITECT", "summaries")).toBe(false);
+  });
+
+  it("interdit à un venture architect de modifier un projet", () => {
+    expect(canEditProject("ADMIN")).toBe(true);
+    expect(canEditProject("VENTURE_ARCHITECT")).toBe(false);
   });
 
   it("laisse un venture architect retirer seulement ses infos", () => {

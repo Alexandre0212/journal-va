@@ -100,7 +100,7 @@ Aucune autre taille.
 L'accent ne sert qu'en petites touches (liseré, pastille, halo). Logos jamais recolorés ni déformés (`object-contain`, hauteur fixe) ; en sombre, posés sur une pastille claire si besoin. Nouveau projet futur sans logo : monogramme élégant.
 
 ## 9. Phases (frise, badges, graphiques)
-Challenge `#23358E` · Discovery `#5B4BC4` · Validation `#0B7A80` · MVP `#2E7D32` · Launch `#E79409` (texte `#18243A`) · Grow `#C0400F` · Scale `#A3195B`. En sombre, utiliser des versions éclaircies pour les textes.
+Challenge `#23358E` · Discovery `#5B4BC4` · Validation `#0B7A80` · MVP `#2E7D32` · Launch `#A26806` · Grow `#C0400F` · Scale `#A3195B`. Le libellé de chaque segment est blanc. Launch n'utilise pas l'orange de marque `#E79409` comme fond : le blanc dessus est à 2,4, donc le segment est assombri jusqu'à `#A26806` (blanc à 4,6). L'orange `#E79409` reste la couleur d'accent, jamais un fond de texte blanc.
 
 ## 10. Motif signature : le ruban Haskè
 Les rubans ondulés du logo (bleu, orange, vert) deviennent le fil conducteur, avec parcimonie :

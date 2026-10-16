@@ -1,0 +1,2 @@
+/** Applique le thème avant le premier rendu. Aligné sur ThemeProvider : attribut class, clé « theme », défaut system. */
+export const themeInitScript = `(function(){try{var d=document.documentElement,t=localStorage.getItem("theme")||"system",r=t==="system"?(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"):t;d.classList.remove("light","dark");if(r==="light"||r==="dark"){d.classList.add(r);d.style.colorScheme=r}}catch(e){}})();`;

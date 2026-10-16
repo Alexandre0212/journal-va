@@ -16,7 +16,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
   return (
     <QueryClientProvider client={client}>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange={false}>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange={false}
+        scriptProps={{ type: "application/json" }}
+      >
         {children}
         <Toaster position="bottom-right" richColors closeButton />
       </ThemeProvider>

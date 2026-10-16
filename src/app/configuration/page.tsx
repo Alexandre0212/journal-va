@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { HaskeLogo } from "@/components/haske-logo";
 
 export default function ConfigurationPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-4 px-6">
+      <HaskeLogo />
       <p className="text-caption text-accent-text">Configuration</p>
       <h1 className="text-h1">La base n'est pas encore prête</h1>
       <p>Aucun utilisateur n'est chargé. Lancez la migration Prisma, puis l'import des données d'origine. Tant que ce n'est pas fait, l'application n'affiche pas de faux tableau de bord.</p>

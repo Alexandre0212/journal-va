@@ -32,3 +32,32 @@ export function targetReached(average: number | null, target: number | null): bo
   if (average == null || target == null || Number.isNaN(target)) return null;
   return average >= target;
 }
+
+export type KpiPace = "reached" | "under" | "open" | "empty";
+
+export function kpiPace(average: number | null, target: number | null): KpiPace {
+  const reached = targetReached(average, target);
+  if (reached === true) return "reached";
+  if (reached === false) return "under";
+  if (average == null) return "empty";
+  return "open";
+}
+
+export function weekDelta(values: Record<string, number>, today: string): number | null {
+  const current = averageLast7(values, today);
+  const previous = averageLast7(values, shiftDay(today, -7));
+  if (current == null || previous == null || previous === 0) return null;
+  return (current - previous) / previous;
+}
+
+export function shareRatio(part: number, total: number): number | null {
+  if (!Number.isFinite(part) || !Number.isFinite(total) || total <= 0 || part < 0) return null;
+  return Math.min(1, part / total);
+}
+
+export function kpiSeries(values: Record<string, number>): Array<{ date: string; value: number }> {
+  return Object.entries(values)
+    .filter((entry): entry is [string, number] => typeof entry[1] === "number" && !Number.isNaN(entry[1]))
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([date, value]) => ({ date, value }));
+}

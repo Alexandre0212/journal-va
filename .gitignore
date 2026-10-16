@@ -1,5 +1,7 @@
 # Secrets — ne jamais versionner
 .env
+.env.local
+.env*.local
 .env.*
 !.env.example
 
@@ -10,11 +12,17 @@ out/
 dist/
 coverage/
 *.tsbuildinfo
+tsconfig.tsbuildinfo
+next-env.d.ts
 
-# Tests
+# Tests et brouillons
 playwright-report/
 test-results/
 blob-report/
+tmp/
+
+# Captures locales
+docs/captures/
 
 # Prisma local (npx prisma dev) — la base Paris reste dans .env
 prisma/*.db

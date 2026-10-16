@@ -31,8 +31,8 @@ export const PHASES = [
     index: 4,
     name: "Launch",
     tip: "Mettre le produit sur le marché et signer les premiers clients.",
-    color: "#E79409",
-    on: "#18243A",
+    color: "#A26806",
+    on: "#FFFFFF",
   },
   {
     index: 5,

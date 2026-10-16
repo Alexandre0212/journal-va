@@ -1,32 +1,49 @@
-import { MarkdownView } from "@/components/markdown-view";
-import { parseMarkdown } from "@/domain/markdown";
-import { FollowUp, MeetingForm } from "@/features/forms";
+import { MeetingsBoard } from "@/features/meetings-board";
+import { TIMEZONE, todayISO } from "@/lib/dates";
 import { requireUser } from "@/server/auth/session";
 import { loadMeetings } from "@/server/queries";
 
+const ALLOWED = new Set(["safya", "triage", "rpm"]);
+
+function minutesNow() {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: TIMEZONE, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date());
+  const hour = Number(parts.find((part) => part.type === "hour")?.value ?? "0");
+  const minute = Number(parts.find((part) => part.type === "minute")?.value ?? "0");
+  return hour * 60 + minute;
+}
+
 export default async function MeetingsPage() {
   const user = await requireUser();
-  const { meetings, projects } = await loadMeetings();
-  const options = projects.map((project) => ({ id: project.id, name: project.name, phase: project.phase }));
+  const { meetings, projects, users, tasks } = await loadMeetings();
+  const allowed = projects.filter((project) => ALLOWED.has(project.id));
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-h1">Réunions et décisions</h1>
-      {user.role === "ADMIN" ? <MeetingForm projects={projects.map((project) => ({ id: project.id, name: project.name }))} /> : <p className="text-small text-muted">La rédaction des comptes rendus est réservée aux administrateurs. Vous pouvez transformer une action de suivi en tâche.</p>}
-      {meetings.length ? meetings.map((meeting) => (
-        <article key={meeting.id} className="surface p-5">
-          <p className="text-caption text-muted">{meeting.date}{meeting.start ? ` · ${meeting.start}` : ""} · {meeting.participants.join(", ") || "Participants non renseignés"}</p>
-          <h2 className="text-h2 mt-1">{meeting.title}</h2>
-          <div className="mt-3"><MarkdownView text={meeting.cr} /></div>
-          <div className="mt-4 flex flex-col gap-2">
-            {parseMarkdown(meeting.cr).flatMap((block) => block.type === "ul" ? block.items : []).slice(0, 8).map((item) => (
-              <div key={item} className="flex flex-wrap items-center justify-between gap-2 text-small">
-                <span>{item.replace(/\*\*/g, "")}</span>
-                <FollowUp meetingId={meeting.id} text={item} projects={options} />
-              </div>
-            ))}
-          </div>
-        </article>
-      )) : <p className="text-muted">Aucune réunion.</p>}
+    <div className="page">
+      <MeetingsBoard
+        canWrite={user.role === "ADMIN"}
+        today={todayISO()}
+        minutesNow={minutesNow()}
+        people={users.map((person) => ({ id: person.id, name: person.name }))}
+        projects={allowed.map((project) => ({ id: project.id, name: project.name, phase: project.phase }))}
+        tasks={tasks.map((task) => ({
+          id: task.id,
+          title: task.title,
+          status: task.status,
+          due: task.due,
+          assignee: task.assignee?.name ?? null,
+          projectName: task.project.name,
+          deleted: task.deletedAt != null,
+        }))}
+        meetings={meetings.map((meeting) => ({
+          id: meeting.id,
+          title: meeting.title,
+          date: meeting.date,
+          start: meeting.start,
+          participants: meeting.participants,
+          cr: meeting.cr,
+          projectIds: meeting.projects.map((link) => link.projectId).filter((id) => ALLOWED.has(id)),
+          actions: meeting.actions.map((action) => ({ id: action.id, text: action.text, taskId: action.taskId })),
+        }))}
+      />
     </div>
   );
 }

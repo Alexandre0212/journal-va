@@ -1,9 +1,11 @@
+import { HaskeLogo } from "@/components/haske-logo";
 import { authMode, microsoftConfigured } from "@/server/auth/session";
 
 export default function ConnexionPage() {
   const ready = authMode() === "entra" && microsoftConfigured();
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-4 px-6">
+      <HaskeLogo />
       <p className="text-caption text-accent-text">Connexion</p>
       <h1 className="text-h1">Se connecter avec Microsoft</h1>
       {ready ? (

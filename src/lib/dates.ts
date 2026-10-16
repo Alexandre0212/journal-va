@@ -45,10 +45,3 @@ export function formatTime(isoInstant: string): string {
     minute: "2-digit",
   }).format(new Date(isoInstant));
 }
-
-export function daysSince(isoInstant: string | null | undefined, now: Date = new Date()): number {
-  if (!isoInstant) return 0;
-  const then = Date.parse(isoInstant);
-  if (Number.isNaN(then)) return 0;
-  return Math.floor((now.getTime() - then) / 86_400_000);
-}

@@ -1,29 +1,42 @@
-import { AnomalyForm, ResolveButton } from "@/features/forms";
+import { AnomaliesBoard } from "@/features/anomalies-board";
+import { todayISO } from "@/lib/dates";
+import { requireUser } from "@/server/auth/session";
 import { loadAnomalies } from "@/server/queries";
 
+const ALLOWED = new Set(["safya", "triage", "rpm"]);
+
 export default async function AnomaliesPage() {
-  const { anomalies, projects } = await loadAnomalies();
-  const enabled = projects.filter((project) => project.anomaliesEnabled);
+  const user = await requireUser();
+  const { anomalies, projects, users, revisedAt } = await loadAnomalies();
+  const allowed = projects.filter((project) => ALLOWED.has(project.id));
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-h1">Anomalies</h1>
-      {enabled.length ? enabled.map((project) => (
-        <section key={project.id} className="surface p-5">
-          <h2 className="text-h3">{project.name}</h2>
-          <div className="mt-3"><AnomalyForm projectId={project.id} /></div>
-        </section>
-      )) : <p className="text-muted">Aucun projet n'a le module anomalies activé.</p>}
-      <ul className="flex flex-col gap-3">
-        {anomalies.map((anomaly) => (
-          <li key={anomaly.id} className="surface p-4">
-            <p className="text-caption text-muted">{anomaly.project.name} · {anomaly.date} · {anomaly.severity}</p>
-            <p className="mt-1">{anomaly.text}</p>
-            {anomaly.file?.unavailable ? <p className="text-small text-muted">Fichier indisponible{anomaly.file.name ? ` · ${anomaly.file.name}` : ""}. La référence est conservée.</p> : null}
-            <ResolveButton id={anomaly.id} status={anomaly.status} />
-          </li>
-        ))}
-        {!anomalies.length ? <li className="text-muted">Aucune anomalie notée.</li> : null}
-      </ul>
+    <div className="page">
+      <AnomaliesBoard
+        today={todayISO()}
+        actor={{ id: user.id, name: user.name }}
+        users={users.map((member) => ({ id: member.id, name: member.name }))}
+        projects={allowed.map((project) => ({ id: project.id, name: project.name, enabled: project.anomaliesEnabled }))}
+        anomalies={anomalies.filter((item) => ALLOWED.has(item.projectId)).map((item) => ({
+          id: item.id,
+          projectId: item.projectId,
+          date: item.date,
+          createdAt: item.createdAt.toISOString(),
+          text: item.text,
+          severity: item.severity,
+          status: item.status,
+          author: item.by?.name ?? null,
+          assigneeId: item.assigneeId,
+          assignee: item.assignee?.name ?? null,
+          file: item.file ? { name: item.file.name, mimeType: item.file.mimeType, unavailable: item.file.unavailable } : null,
+          comments: item.comments.map((comment) => ({
+            id: comment.id,
+            body: comment.body,
+            at: comment.createdAt.toISOString(),
+            author: comment.author.name,
+          })),
+          revisedAt: revisedAt.get(item.id)?.toISOString() ?? null,
+        }))}
+      />
     </div>
   );
 }

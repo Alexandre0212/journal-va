@@ -5,6 +5,8 @@
   --surface-sunken: #f0f3fa;
   --surface-raised: #ffffff;
   --primary: #23358e;
+  --primary-hover: #3148b8;
+  --primary-active: #1a2870;
   --primary-fg: #23358e;
   --on-primary: #ffffff;
   --accent: #e79409;
@@ -49,6 +51,8 @@
   --surface-sunken: #10192e;
   --surface-raised: #1d2b47;
   --primary: #23358e;
+  --primary-hover: #3c56c4;
+  --primary-active: #1a2870;
   --primary-fg: #9aabf5;
   --on-primary: #ffffff;
   --accent: #e79409;

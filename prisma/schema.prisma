@@ -32,6 +32,7 @@ enum AnomalySeverity {
 
 enum AnomalyStatus {
   open
+  progress
   resolved
 }
 
@@ -47,6 +48,10 @@ model User {
   name      String
   role      Role
   isTest    Boolean   @default(false)
+  title     String    @default("")
+  avatarUrl String?
+  active    Boolean   @default(true)
+  sortOrder Int       @default(0)
   joinedAt  DateTime?
   createdAt DateTime  @default(now())
 
@@ -58,9 +63,11 @@ model User {
   historyEntries  TaskHistory[]
   infos           Info[]
   courses         Course[]
-  anomalies       Anomaly[]
-  mgmtItems       MgmtItem[]
-  activity        ActivityLog[]
+  anomalies         Anomaly[]        @relation("AnomalyAuthor")
+  assignedAnomalies Anomaly[]        @relation("AnomalyAssignee")
+  anomalyComments   AnomalyComment[]
+  mgmtItems         MgmtItem[]
+  activity          ActivityLog[]
 }
 
 model Project {
@@ -249,15 +256,31 @@ model Anomaly {
   date      String
   text      String
   severity  AnomalySeverity
-  status    AnomalyStatus   @default(open)
-  byId      String?
-  by        User?           @relation(fields: [byId], references: [id])
-  createdAt DateTime
-  updatedAt DateTime        @updatedAt
+  status     AnomalyStatus @default(open)
+  byId       String?
+  by         User?         @relation("AnomalyAuthor", fields: [byId], references: [id])
+  assigneeId String?
+  assignee   User?         @relation("AnomalyAssignee", fields: [assigneeId], references: [id])
+  createdAt  DateTime
+  updatedAt  DateTime      @updatedAt
 
-  file AnomalyFile?
+  file     AnomalyFile?
+  comments AnomalyComment[]
 
   @@index([projectId, status])
+  @@index([assigneeId])
+}
+
+model AnomalyComment {
+  id        String   @id @default(cuid())
+  anomalyId String
+  anomaly   Anomaly  @relation(fields: [anomalyId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([anomalyId, createdAt])
 }
 
 model AnomalyFile {

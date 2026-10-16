@@ -31,6 +31,15 @@ export function formatPercent(ratio: number): string {
   return `${Math.round(ratio * 100)} %`;
 }
 
+export type OkrPace = "done" | "late" | "active" | "idle";
+
+export function okrPace(okr: OkrInput, today: string): OkrPace {
+  if (okrRatio(okr) >= 1) return "done";
+  if (okr.due && okr.due < today) return "late";
+  if (okrRatio(okr) > 0) return "active";
+  return "idle";
+}
+
 const nf = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 });
 
 export function paceText(
