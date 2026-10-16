@@ -1,8 +1,20 @@
+# prisma generate est inclus dans npm run build. Aucune migration, aucune écriture en base.
 [build]
-  command = "npx prisma generate && npm run build"
+  command = "npm run build"
 
 [build.environment]
   NODE_VERSION = "22"
+  NPM_FLAGS = "--include=dev"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    X-Robots-Tag = "noindex, nofollow"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"

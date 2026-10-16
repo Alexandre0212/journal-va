@@ -1,7 +1,6 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { requireUser } from "@/server/auth/session";
 import { prisma } from "@/server/db";
+import { anomalyStorage } from "@/server/storage";
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   await requireUser();
@@ -10,10 +9,8 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   if (!anomaly?.file || anomaly.file.unavailable || !anomaly.file.storagePath) {
     return new Response("Fichier indisponible", { status: 404 });
   }
-  const root = path.join(process.cwd(), "storage", "anomalies");
-  const resolved = path.resolve(anomaly.file.storagePath);
-  if (!resolved.startsWith(root)) return new Response("Fichier indisponible", { status: 404 });
-  const bytes = await readFile(resolved);
+  const bytes = await anomalyStorage().read(anomaly.file.storagePath);
+  if (!bytes) return new Response("Fichier indisponible", { status: 404 });
   return new Response(bytes, {
     headers: {
       "Content-Type": anomaly.file.mimeType || "application/octet-stream",

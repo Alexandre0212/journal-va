@@ -25,6 +25,7 @@
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/utilities": "^3.2.2",
+    "@netlify/blobs": "^11.1.4",
     "@number-flow/react": "^0.6.2",
     "@prisma/client": "^6.19.3",
     "@tanstack/react-query": "^5.104.3",
@@ -43,6 +44,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
+    "@netlify/plugin-nextjs": "^5.16.2",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",

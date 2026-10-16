@@ -1,10 +1,9 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import { mkdir, rm, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
+import { anomalyFileError } from "@/domain/anomaly-files";
 import { anomalyFieldChanges } from "@/domain/anomalies";
 import { memberRoleChangeError } from "@/domain/team";
 import { buildSummary, type SummaryFacts } from "@/domain/summary";
@@ -35,6 +34,7 @@ import { setDevActor } from "@/server/auth/session";
 import { logActivity } from "@/server/activity";
 import { requireAdmin, requireUser } from "@/server/auth/session";
 import { prisma } from "@/server/db";
+import { anomalyStorage } from "@/server/storage";
 import { destroyDeletedItem, restoreDeletedItem } from "@/server/trash";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -380,8 +380,6 @@ export async function saveCourse(input: unknown): Promise<ActionResult> {
   }
 }
 
-const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf", "video/mp4"]);
-
 export async function saveAnomaly(formData: FormData): Promise<ActionResult> {
   try {
     const user = await requireUser();
@@ -398,13 +396,9 @@ export async function saveAnomaly(formData: FormData): Promise<ActionResult> {
     const id = randomUUID();
     let stored: { name: string; mimeType: string; storagePath: string } | null = null;
     if (file instanceof File && file.size > 0) {
-      if (!ALLOWED_MIME.has(file.type)) return { ok: false, error: "Type de fichier non accepté." };
-      if (file.size > 8_000_000) return { ok: false, error: "Fichier trop lourd (8 Mo maximum)." };
-      const dir = path.join(process.cwd(), "storage", "anomalies");
-      await mkdir(dir, { recursive: true });
-      const storagePath = path.join(dir, `${id}-${file.name.replace(/[^\w.\-]+/g, "_")}`);
-      await writeFile(storagePath, Buffer.from(await file.arrayBuffer()));
-      stored = { name: file.name, mimeType: file.type, storagePath };
+      const uploaded = await storeAnomalyUpload(id, file);
+      if (!uploaded.ok) return uploaded;
+      stored = uploaded;
     }
     await prisma.anomaly.create({
       data: {
@@ -463,20 +457,19 @@ export async function assignAnomaly(id: string, assigneeId: string | null): Prom
 const ANOMALY_PROJECTS = new Set(["safya", "triage", "rpm"]);
 
 async function storeAnomalyUpload(id: string, file: File) {
-  if (!ALLOWED_MIME.has(file.type)) return { ok: false as const, error: "Type de fichier non accepté." };
-  if (file.size > 8_000_000) return { ok: false as const, error: "Fichier trop lourd (8 Mo maximum)." };
-  const dir = path.join(process.cwd(), "storage", "anomalies");
-  await mkdir(dir, { recursive: true });
-  const storagePath = path.join(dir, `${id}-${Date.now()}-${file.name.replace(/[^\w.\-]+/g, "_")}`);
-  await writeFile(storagePath, Buffer.from(await file.arrayBuffer()));
+  const error = anomalyFileError({ type: file.type, size: file.size });
+  if (error) return { ok: false as const, error };
+  const storagePath = await anomalyStorage().save({
+    id,
+    name: file.name,
+    bytes: new Uint8Array(await file.arrayBuffer()),
+  });
   return { ok: true as const, name: file.name, mimeType: file.type, storagePath };
 }
 
 async function discardStoredFile(storagePath: string | null | undefined) {
   if (!storagePath) return;
-  const root = path.resolve(process.cwd(), "storage", "anomalies");
-  const resolved = path.resolve(storagePath);
-  if (resolved !== root && resolved.startsWith(`${root}${path.sep}`)) await rm(resolved, { force: true });
+  await anomalyStorage().remove(storagePath);
 }
 
 export async function updateAnomaly(formData: FormData): Promise<ActionResult> {

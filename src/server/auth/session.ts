@@ -4,20 +4,14 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { User } from "@prisma/client";
 import { DEFAULT_DEV_USER_ID, DEV_ACTORS } from "@/domain/actors";
+import { resolveAuthMode, type AuthMode } from "@/domain/auth";
 import { prisma } from "@/server/db";
 
 export { DEFAULT_DEV_USER_ID, DEV_ACTORS };
-
-export type AuthMode = "dev" | "entra";
+export type { AuthMode };
 
 export function authMode(): AuthMode {
-  const mode = process.env.AUTH_MODE;
-  if (mode === "dev" && process.env.NODE_ENV === "production") {
-    throw new Error("AUTH_MODE=dev est refusé quand NODE_ENV=production.");
-  }
-  if (mode === "entra") return "entra";
-  if (mode === "dev" || process.env.NODE_ENV !== "production") return "dev";
-  return "entra";
+  return resolveAuthMode(process.env.AUTH_MODE, process.env.NODE_ENV);
 }
 
 export function microsoftConfigured(): boolean {
@@ -26,6 +20,10 @@ export function microsoftConfigured(): boolean {
 
 export async function getCurrentUser(): Promise<User | null> {
   const mode = authMode();
+  if (mode === "preview") {
+    const id = process.env.DEV_USER_ID || DEFAULT_DEV_USER_ID;
+    return prisma.user.findUnique({ where: { id } });
+  }
   if (mode === "entra") {
     if (!microsoftConfigured()) return null;
     // Le branchement Auth.js + Entra ID se fait dans ce fichier seulement.

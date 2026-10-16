@@ -4,11 +4,11 @@ Le déploiement n'a pas été exécuté. Ce document décrit ce qui est prêt.
 
 ## Build
 
-`netlify.toml` lance `npx prisma generate && npm run build` avec le plugin `@netlify/plugin-nextjs`. Il faudra l'ajouter aux dépendances au moment du déploiement (`npm install -D @netlify/plugin-nextjs`) et définir les variables d'environnement dans Netlify, jamais dans le dépôt.
+`netlify.toml` lance `npm run build` avec Node 22 et l'adaptateur `@netlify/plugin-nextjs`. Le script exécute `prisma generate` (cibles `native` et `rhel-openssl-3.0.x`) puis `next build`. Aucune migration n'est lancée et aucune donnée n'est écrite. Les variables d'environnement se définissent dans Netlify, jamais dans le dépôt. Ne pas y fixer `NODE_ENV=production` avant l'installation des dépendances.
 
 ## Variables
 
-Voir `.env.example`. En production : `AUTH_MODE=entra`, `DATABASE_URL` du Postgres Paris, et les trois secrets Microsoft. `AUTH_MODE=dev` fait échouer le démarrage.
+Voir `.env.example` et la section « Déploiement Netlify » du README. Pour le site de prévisualisation : `AUTH_MODE=preview`, `DEV_USER_ID=u_alexandre_sankara` et `DATABASE_URL` du Postgres Paris. `AUTH_MODE=dev` fait échouer le démarrage en production. Les secrets Microsoft ne sont nécessaires qu'en mode `entra`.
 
 ## Microsoft 365
 
@@ -20,4 +20,4 @@ Les récaps importés restent. Un administrateur peut calculer un récap depuis 
 
 ## Fichiers
 
-Les nouvelles pièces d'anomalies vont dans `storage/` en local. Sur Netlify, il faudra brancher Netlify Blobs derrière `AnomalyFile.storagePath` : l'interface est déjà un chemin vérifié côté serveur, pas une URL publique.
+Les nouvelles pièces d'anomalies vont dans `storage/` en local. Sur Netlify (`NETLIFY=true`), `StorageService` les écrit dans le store Netlify Blobs `anomaly-files`. Les contrôles de type et de taille sont les mêmes. L'accès passe par la route serveur, pas par une URL publique.
