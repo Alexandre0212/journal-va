@@ -10,7 +10,6 @@ const body = Inter({ subsets: ["latin"], variable: "--font-body" });
 export const metadata: Metadata = {
   title: "Journal d'un Venture Architect",
   description: "Pilotage des projets Haskè Ventures",
-  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

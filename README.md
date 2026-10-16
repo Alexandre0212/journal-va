@@ -41,8 +41,6 @@ Le client Prisma est généré pour la machine de build (`native`) et pour les f
 
 En preview, `AUTH_MODE=preview` ouvre `DEV_USER_ID` sans page de connexion. Le sélecteur « Voir en tant que » reste réservé à `AUTH_MODE=dev`, lui-même refusé en production. Les pièces jointes nouvelles passent par Netlify Blobs. En local, elles restent dans `storage/`.
 
-Le site envoie `X-Robots-Tag: noindex, nofollow`. `robots.txt` interdit l'indexation.
-
 Variables à saisir dans Netlify (Site configuration, Environment variables). Aucune valeur secrète ne figure dans le dépôt. Ne pas définir `NODE_ENV=production` dans l'interface : npm n'installerait plus les outils de build. `NPM_FLAGS=--include=dev` est déjà dans `netlify.toml`.
 
 | Variable | Production preview | Rôle |
