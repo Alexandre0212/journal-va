@@ -9,7 +9,7 @@ Phase 2. Next.js (App Router) + Prisma 6.19 + le Postgres de `DATABASE_URL`. Pri
 - `src/server/auth/session.ts` : seul fichier à modifier pour Auth.js + Entra ID.
 - `src/server/actions.ts` : écritures, contrôle de rôle, journal d'activité.
 - `src/server/queries.ts` : lectures par écran. Le tableau de bord charge les projets avec leurs relations en jointure, plus les infos, réunions et récap du jour. Mesure du 15 octobre 2026 : 5 requêtes SQL pour cette page.
-- `scripts/migration/import.ts` : import idempotent. Le dossier `passation-journal-va/` n'est pas modifié.
+- `scripts/migration/import.ts` : import idempotent. Il lit uniquement `LEGACY_DATA_DIR` et ne modifie pas ce dossier.
 - `src/app/` : écrans. `storage/` (hors `public/`) reçoit les pièces jointes nouvelles.
 
 ## Permissions

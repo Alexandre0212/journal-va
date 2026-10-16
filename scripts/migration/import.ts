@@ -1,9 +1,13 @@
-import { readFile, readdir, writeFile } from "node:fs/promises";
+import { access, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { PrismaClient, type Prisma } from "@prisma/client";
 import { normalizeMgmtText } from "./normalize";
+import { loadEnvFile } from "./env-file";
 
-const root = path.resolve(process.cwd(), "passation-journal-va", "donnees");
+loadEnvFile();
+
+const missingLegacyDir = "Renseignez LEGACY_DATA_DIR dans .env avec le chemin du dossier des données d'origine";
+let root = "";
 const dryRun = process.argv.includes("--dry-run");
 
 type Doc = Record<string, unknown>;
@@ -38,18 +42,64 @@ function date(value: unknown): Date | null {
 
 const USERS = [
   {
-    id: "u_alexandre_sankara",
-    email: "alexandre.sankara@haskeventures.com",
-    name: "Alexandre Sankara",
-    role: "ADMIN" as const,
+    id: "u_ben_diop",
+    email: "ben.diop@haskeventures.com",
+    name: "Ben Diop",
+    role: "VENTURE_ARCHITECT" as const,
     isTest: false,
+    title: "Ventures Studio Director",
+    avatarUrl: "/equipe/ben-diop.png",
+    sortOrder: 1,
   },
   {
     id: "u_5MKSBjCyBoc8Pi6hC78kuQ",
     email: "fatoumata.sonko@haskeventures.com",
-    name: "Fatoumata Sonko",
+    name: "Fatoumata Bintou Sonko",
     role: "ADMIN" as const,
     isTest: false,
+    title: "Senior Venture Architect",
+    avatarUrl: "/equipe/fatoumata-bintou-sonko.png",
+    sortOrder: 2,
+  },
+  {
+    id: "u_michael_goudiaby",
+    email: "michael.goudiaby@haskeventures.com",
+    name: "Michael Goudiaby",
+    role: "VENTURE_ARCHITECT" as const,
+    isTest: false,
+    title: "Venture Architect",
+    avatarUrl: "/equipe/michael-goudiaby.png",
+    sortOrder: 3,
+  },
+  {
+    id: "u_alexandre_sankara",
+    email: "alexandre.sankara@haskeventures.com",
+    name: "Guy Alexandre Sankara",
+    role: "ADMIN" as const,
+    isTest: false,
+    title: "Venture Architect",
+    avatarUrl: "/equipe/guy-alexandre-sankara.png",
+    sortOrder: 4,
+  },
+  {
+    id: "u_ndeye_amy_sam",
+    email: "amy.sam@haskeventures.com",
+    name: "Ndeye Amy Sam",
+    role: "VENTURE_ARCHITECT" as const,
+    isTest: false,
+    title: "Venture Architect",
+    avatarUrl: "/equipe/ndeye-amy-sam.png",
+    sortOrder: 5,
+  },
+  {
+    id: "u_elias_ba",
+    email: "elias.ba@haskeventures.com",
+    name: "Elias Bâ",
+    role: "VENTURE_ARCHITECT" as const,
+    isTest: false,
+    title: "AI Expert Senior Engineer",
+    avatarUrl: "/equipe/elias-ba.png",
+    sortOrder: 6,
   },
   {
     id: "u_va_test",
@@ -57,10 +107,21 @@ const USERS = [
     name: "VA Test",
     role: "VENTURE_ARCHITECT" as const,
     isTest: true,
+    title: "",
+    avatarUrl: null,
+    sortOrder: 99,
   },
 ];
 
 async function main() {
+  const configured = process.env.LEGACY_DATA_DIR?.trim();
+  if (!configured) throw new Error(missingLegacyDir);
+  root = path.join(path.resolve(configured), "donnees");
+  try {
+    await access(root);
+  } catch {
+    throw new Error(missingLegacyDir);
+  }
   const [projects, okrs, tasks, kpis, infos, courses, anomalies, notes, mgmt, meetings, summaries, team] =
     await Promise.all([
       readCollection("projects"),
@@ -133,7 +194,15 @@ async function main() {
       for (const user of USERS) {
         await tx.user.upsert({
           where: { id: user.id },
-          update: { email: user.email, name: user.name, role: user.role, isTest: user.isTest },
+          update: {
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            isTest: user.isTest,
+            title: user.title,
+            avatarUrl: user.avatarUrl,
+            sortOrder: user.sortOrder,
+          },
           create: {
             ...user,
             joinedAt: user.id === "u_5MKSBjCyBoc8Pi6hC78kuQ" ? date(fatou?.data.joinedAt) : null,
@@ -456,7 +525,7 @@ async function main() {
     const lines = [
       "# Rapport de migration",
       "",
-      `Import exécuté le ${new Date().toISOString()} vers le Prisma Postgres configuré dans \`.env\`. Les fichiers de \`passation-journal-va/\` n'ont pas été modifiés.`,
+      `Import exécuté le ${new Date().toISOString()} vers le Prisma Postgres configuré dans \`.env\`. Les fichiers des données d'origine n'ont pas été modifiés.`,
       "",
       "## Volumes",
       "",
@@ -464,7 +533,7 @@ async function main() {
       "",
       "## Comptes créés",
       "",
-      "- Alexandre Sankara, administrateur, utilisateur par défaut",
+      "- Guy Alexandre Sankara, administrateur, utilisateur par défaut",
       "- Fatoumata Sonko, administratrice, propriétaire des données déjà attribuées à son identifiant",
       "- VA Test, venture architect, compte de test",
       "",

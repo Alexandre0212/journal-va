@@ -2,7 +2,7 @@
 
 Phase 1, 15 octobre 2026. Lecture seule de l'original. Aucune donnée source n'a été modifiée.
 
-Sources lues : `AGENTS.md`, `docs/DESIGN.md`, `passation-journal-va/LISEZMOI.md` (partie métier seulement), `passation-journal-va/journal-va.html` (1 084 lignes), `passation-journal-va/donnees/`, `public/logos/`.
+Sources lues : `AGENTS.md`, `docs/DESIGN.md`, `LISEZMOI.md` des données d'origine (partie métier seulement), `journal-va.html` des données d'origine (1 084 lignes), `donnees/` des données d'origine, `public/logos/`.
 
 L'original est une page unique. Il n'y a pas de routes. Tout l'inventaire ci-dessous doit exister dans la nouvelle plateforme, modernisé selon `docs/DESIGN.md`. Ce qui n'existe pas dans l'original et qui est demandé par le cahier des charges est listé à part, comme ajout, jamais comme remplacement silencieux.
 
@@ -33,7 +33,7 @@ Identifiants proposés pour les deux comptes qui n'existent pas dans l'export : 
 
 ## 2. Ce que contient le paquet
 
-Douze dossiers de documents dans `passation-journal-va/donnees/`. La collection `anomalyfiles`, citée par le code et par `LISEZMOI.md`, n'a ni dossier ni fichier.
+Douze dossiers de documents dans `donnees/` des données d'origine. La collection `anomalyfiles`, citée par le code et par `LISEZMOI.md`, n'a ni dossier ni fichier.
 
 | Collection | Fichiers | Remarque vérifiée |
 |---|---|---|
@@ -58,7 +58,7 @@ Tâches : les 40 ont une `date`, un `okrId` et un `history`. 34 sans `assignee`,
 
 ## 3. Inventaire fonctionnel
 
-Ligne = `passation-journal-va/journal-va.html`. Destination = module futur. Rien de cette liste ne disparaît.
+Ligne = `journal-va.html` des données d'origine. Destination = module futur. Rien de cette liste ne disparaît.
 
 ### En-tête et navigation familière
 
@@ -436,4 +436,4 @@ Tout utilisateur authentifié lit tout. Masquer un bouton ne suffit pas : chaque
 
 ## 13. Contrôle de cet audit
 
-Comptages faits en lisant les 74 fichiers JSON de `donnees/` (3 + 9 + 40 + 3 + 2 + 3 + 7 + 3 + 1 + 1 + 1 + 1). Formules relues aux lignes citées. Logos mesurés par lecture des pixels (dimensions, alpha, couleurs dominantes, contrastes). Aucun test applicatif : il n'y a pas encore d'application. `passation-journal-va/` n'a pas été modifié.
+Comptages faits en lisant les 74 fichiers JSON de `donnees/` (3 + 9 + 40 + 3 + 2 + 3 + 7 + 3 + 1 + 1 + 1 + 1). Formules relues aux lignes citées. Logos mesurés par lecture des pixels (dimensions, alpha, couleurs dominantes, contrastes). Aucun test applicatif : il n'y a pas encore d'application. Les données d'origine n'ont pas été modifiées.

@@ -4,7 +4,7 @@ description: Spécialiste de l'import des données d'origine dans PostgreSQL via
 ---
 Tu es responsable de la migration des données. Aucune donnée ne doit être perdue ni écrasée.
 
-Sources en lecture seule : `passation-journal-va/export-donnees.json`, `passation-journal-va/donnees/`. `import-firestore.js` sert seulement à comprendre la structure.
+Sources en lecture seule : `export-donnees.json` et `donnees/` dans le dossier indiqué par `LEGACY_DATA_DIR`. `import-firestore.js` sert seulement à comprendre la structure.
 
 Volume attendu : 3 projets (`safya`, `triage`, `rpm`), 9 OKR, 40 tâches, 3 KPI, 2 infos, 3 notes, 7 entrées de pilotage, 3 récaps, 1 réunion, 1 course, 1 anomalie, 1 membre. Vérifie ces chiffres et signale tout écart.
 

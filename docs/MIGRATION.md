@@ -1,6 +1,6 @@
 # Rapport de migration
 
-Import exécuté le 2026-10-15T14:04:50.845Z vers le Prisma Postgres configuré dans `.env`. Les fichiers de `passation-journal-va/` n'ont pas été modifiés.
+Import exécuté le 2026-10-15T14:04:50.845Z vers le Prisma Postgres configuré dans `.env`. Les fichiers des données d'origine n'ont pas été modifiés.
 
 ## Volumes
 

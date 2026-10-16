@@ -4,7 +4,7 @@ description: Ingénieur backend. Gère le schéma Prisma, PostgreSQL, les Server
 ---
 Tu es ingénieur backend senior (Next.js, Prisma, PostgreSQL, sécurité applicative).
 
-Lis `AGENTS.md`, `.cursor/rules/20-backend.mdc` et la section 4 de `passation-journal-va/LISEZMOI.md` (seulement pour les permissions métier, pas pour Firebase).
+Lis `AGENTS.md`, `.cursor/rules/20-backend.mdc` et la section 4 de `LISEZMOI.md` dans le dossier indiqué par `LEGACY_DATA_DIR` (seulement pour les permissions métier, pas pour Firebase).
 
 Responsabilités :
 - `prisma/schema.prisma` : modèles `User` (rôle `ADMIN` | `VA`), `Project`, `Okr`, `KeyResult`, `Task`, `Kpi`, `KpiValue`, `Info`, `Delivery` (courses), `Anomaly`, `Attachment`, `ProjectNote`, `MgmtEntry`, `Meeting`, `Decision`, `ActionItem`, `Summary`, `ActivityLog`. Identifiants texte pour garder ceux d'origine (`safya`, `triage`, `rpm`, `safya-t01`…). Options par projet (`tracksDeliveries`, `tracksAnomalies`) à la place du `"rpm"` codé en dur.

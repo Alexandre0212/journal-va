@@ -1,15 +1,15 @@
 # Journal d'un Venture Architect — Haskè Ventures
 
-Plateforme de pilotage des projets du venture studio Haskè Ventures (Dakar). Elle remplace le fichier unique `passation-journal-va/journal-va.html`, hébergé jusqu'ici sur claude.ai.
+Plateforme de pilotage des projets du venture studio Haskè Ventures (Dakar). Elle remplace le fichier unique `journal-va.html` des données d'origine, hébergé jusqu'ici sur claude.ai.
 
 ## Priorité n°1 : le design
 L'application doit être exceptionnellement belle, finement animée et très professionnelle : la sensation d'un logiciel construit par une excellente équipe de design et d'ingénierie. Le design est un critère d'acceptation au même titre que le fonctionnel. La beauté ne doit jamais être obtenue au détriment de la fiabilité. Voir `docs/DESIGN.md`.
 
 ## Sources de vérité
 - `docs/DESIGN.md` : direction artistique, thèmes, typographie, tokens, motion. Prime sur toute autre indication visuelle.
-- `passation-journal-va/LISEZMOI.md` : collections et permissions métier. Ignorer ses consignes Firebase : le projet utilise Prisma.
-- `passation-journal-va/journal-va.html` : application d'origine. Ses fonctionnalités, workflows et sa logique de navigation doivent tous exister dans la nouvelle version.
-- `passation-journal-va/export-donnees.json` et `passation-journal-va/donnees/` : données réelles, LECTURE SEULE.
+- `LISEZMOI.md` des données d'origine (`LEGACY_DATA_DIR`) : collections et permissions métier. Ignorer ses consignes Firebase : le projet utilise Prisma.
+- `journal-va.html` des données d'origine : application d'origine. Ses fonctionnalités, workflows et sa logique de navigation doivent tous exister dans la nouvelle version.
+- `export-donnees.json` et `donnees/` des données d'origine : données réelles, LECTURE SEULE.
 - `public/logos/` : `haske-ventures.png`, `safya.png`, `triage-plus.png`, `ractac.png`.
 
 ## Projets autorisés

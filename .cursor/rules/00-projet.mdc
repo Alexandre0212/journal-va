@@ -9,6 +9,6 @@ alwaysApply: true
 - TypeScript strict, pas de `any`, pas de `@ts-ignore`. Zod pour toute entrée, validée côté serveur.
 - Logique métier dans `src/domain/`, en fonctions pures testées.
 - Chaque écran : loading, empty, success, error, unauthorized.
-- `passation-journal-va/` en lecture seule.
+- Le dossier des données d'origine (`LEGACY_DATA_DIR`) est en lecture seule.
 - Ne jamais supprimer une fonctionnalité de l'original pour simplifier le design.
 - Ne rien déclarer terminé sans `tsc --noEmit`, `eslint`, tests concernés, et sans dire ce qui n'a pas été vérifié.

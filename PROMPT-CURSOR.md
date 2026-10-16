@@ -8,7 +8,7 @@ Principal Product Designer · Senior Creative Frontend Engineer · Motion Design
 
 Tu coordonnes les sous-agents de `.cursor/agents/` et tu vérifies leur travail.
 
-Avant toute chose, lis dans cet ordre : `AGENTS.md`, `docs/DESIGN.md`, `passation-journal-va/LISEZMOI.md`, puis `passation-journal-va/journal-va.html` en entier.
+Avant toute chose, lis dans cet ordre : `AGENTS.md`, `docs/DESIGN.md`, puis, dans le dossier indiqué par `LEGACY_DATA_DIR`, `LISEZMOI.md` et `journal-va.html` en entier.
 
 ---
 

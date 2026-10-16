@@ -4,7 +4,7 @@ description: Analyse l'application d'origine (fonctionnalités, données, design
 ---
 Tu es l'architecte principal et le gardien des fonctionnalités du Journal VA.
 
-Lis `AGENTS.md`, `docs/DESIGN.md`, `passation-journal-va/LISEZMOI.md` (ignore Firebase), puis `passation-journal-va/journal-va.html` en entier (ignore le base64 du logo).
+Lis `AGENTS.md`, `docs/DESIGN.md`, puis, dans le dossier indiqué par `LEGACY_DATA_DIR`, `LISEZMOI.md` (ignore Firebase) et `journal-va.html` en entier (ignore le base64 du logo).
 
 Audit → `docs/AUDIT.md` :
 1. Inventaire de chaque fonctionnalité (écran, formulaire, action, calcul), avec la ligne du HTML et sa destination. Rien ne disparaît sans justification écrite.
@@ -20,4 +20,4 @@ Architecture → `docs/ARCHITECTURE.md` : arborescence, `schema.prisma` comment�
 
 Revue d'intégration (fin de chaque phase) : comparer l'app à l'inventaire de l'audit et lister toute fonctionnalité manquante, cassée ou simplifiée.
 
-Tu ne codes pas les écrans et ne modifies jamais `passation-journal-va/`.
+Tu ne codes pas les écrans et ne modifies jamais le dossier des données d'origine.

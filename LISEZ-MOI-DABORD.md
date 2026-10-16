@@ -2,7 +2,7 @@
 
 ## 1. Préparer le dossier
 Crée un dossier `journal-va-platform` et mets dedans :
-- le dossier `passation-journal-va/` (dézippé, tel quel) ;
+- le dossier des données d'origine (dézippé, tel quel), hors du dépôt : son chemin se renseigne dans `LEGACY_DATA_DIR` ;
 - tout le contenu de ce kit, y compris le dossier caché `.cursor/` (Mac : `Cmd + Shift + .` pour voir les fichiers cachés ; Windows : Affichage > Éléments masqués).
 
 ```
@@ -12,8 +12,7 @@ journal-va-platform/
 ├── AGENTS.md
 ├── PROMPT-CURSOR.md     ← le prompt à coller dans Cursor
 ├── docs/DESIGN.md
-├── public/logos/        ← logos
-└── passation-journal-va/
+└── public/logos/        ← logos
 ```
 Dans un terminal, depuis ce dossier : `git init && git add . && git commit -m "Point de départ"`.
 

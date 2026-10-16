@@ -5,7 +5,7 @@ import nextTs from "eslint-config-next/typescript";
 export default defineConfig([
   ...nextVitals,
   ...nextTs,
-  globalIgnores([".next/**", "node_modules/**", "coverage/**", "playwright-report/**", "public/**", "passation-journal-va/**"]),
+  globalIgnores([".next/**", "node_modules/**", "coverage/**", "playwright-report/**", "public/**"]),
   {
     rules: {
       "react/no-unescaped-entities": "off",
