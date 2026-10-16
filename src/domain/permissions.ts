@@ -20,10 +20,6 @@ export function canDeleteInfo(role: AppRole, authorId: string | null, actorId: s
   return authorId != null && authorId === actorId;
 }
 
-export function canEditProject(role: AppRole): boolean {
-  return isAdmin(role);
-}
-
 export function canToggleProjectModules(role: AppRole): boolean {
-  return canEditProject(role);
+  return isAdmin(role);
 }

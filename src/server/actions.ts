@@ -25,11 +25,9 @@ import {
   notesWriteSchema,
   okrWriteSchema,
   projectPhaseChangeSchema,
-  projectWriteSchema,
   taskWriteSchema,
 } from "@/domain/schemas";
-import { canDeleteInfo, canEditProject, canWriteCollection } from "@/domain/permissions";
-import { projectFieldChanges } from "@/domain/projects";
+import { canDeleteInfo, canWriteCollection } from "@/domain/permissions";
 import { trashItemSchema } from "@/domain/schemas";
 import { stamp } from "@/domain/tasks";
 import { todayISO } from "@/lib/dates";
@@ -576,67 +574,6 @@ export async function addAnomalyComment(id: string, body: string): Promise<Actio
     if (!current) return { ok: false, error: "Anomalie introuvable." };
     await prisma.anomalyComment.create({ data: { anomalyId: id, authorId: user.id, body: text.data } });
     await prisma.activityLog.create({ data: { actorId: user.id, entity: "anomaly", entityId: id, field: "comment", after: text.data } });
-    refresh();
-    return { ok: true };
-  } catch (error) {
-    return fail(error);
-  }
-}
-
-export async function saveProject(input: unknown): Promise<ActionResult> {
-  try {
-    const user = await requireUser();
-    if (!canEditProject(user.role)) return { ok: false, error: "Vous ne pouvez pas modifier ce projet." };
-    const parsed = projectWriteSchema.safeParse(input);
-    if (!parsed.success) return { ok: false, error: "Vérifiez les champs du projet." };
-    const data = parsed.data;
-    const participantIds = [...new Set(data.participantIds.filter(Boolean))];
-    const current = await prisma.project.findUnique({
-      where: { id: data.id },
-      include: { participants: { select: { userId: true } } },
-    });
-    if (!current) return { ok: false, error: "Projet introuvable." };
-    const memberIds = [...new Set([...(data.leadId ? [data.leadId] : []), ...participantIds])];
-    if (memberIds.length) {
-      const found = await prisma.user.findMany({ where: { id: { in: memberIds } }, select: { id: true } });
-      if (found.length !== memberIds.length) return { ok: false, error: "Un membre indiqué n'existe pas." };
-    }
-    const changes = projectFieldChanges(
-      {
-        name: current.name,
-        phase: current.phase,
-        coursesEnabled: current.coursesEnabled,
-        anomaliesEnabled: current.anomaliesEnabled,
-        leadId: current.leadId,
-        participantIds: current.participants.map((item) => item.userId),
-      },
-      { ...data, participantIds },
-    );
-    if (!changes.length) {
-      refresh();
-      return { ok: true };
-    }
-    await prisma.$transaction(async (tx) => {
-      await tx.project.update({
-        where: { id: data.id },
-        data: {
-          name: data.name,
-          phase: data.phase,
-          coursesEnabled: data.coursesEnabled,
-          anomaliesEnabled: data.anomaliesEnabled,
-          leadId: data.leadId,
-        },
-      });
-      await tx.projectParticipant.deleteMany({ where: { projectId: data.id } });
-      if (participantIds.length) {
-        await tx.projectParticipant.createMany({
-          data: participantIds.map((userId) => ({ projectId: data.id, userId })),
-        });
-      }
-      for (const change of changes) {
-        await logActivity(tx, { actorId: user.id, entity: "project", entityId: data.id, field: change.field, before: change.before, after: change.after });
-      }
-    });
     refresh();
     return { ok: true };
   } catch (error) {

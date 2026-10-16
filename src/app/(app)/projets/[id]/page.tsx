@@ -12,7 +12,6 @@ import { PHASES, PROJECT_ACCENTS, PROJECT_LOGOS, phaseByIndex } from "@/domain/p
 import { isLate, onDay } from "@/domain/tasks";
 import { AnomalyForm, CourseForm, DayActionsBound, DeleteButton, InfoForm, KpiToday, NotesEditor, ResolveButton } from "@/features/forms";
 import { PhaseSwitch } from "@/features/phase-switch";
-import { ProjectEditor } from "@/features/project-editor";
 import { ProjectObjectives } from "@/features/project-objectives";
 import { Counter, Reveal } from "@/features/reveal";
 import { Spark } from "@/features/spark";
@@ -75,23 +74,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           </div>
         </header>
       </div>
-      <div className="fiche-phase-row">
-        <PhaseSwitch projectId={project.id} projectName={project.name} official={project.phase} phases={PHASES.map((item) => ({ index: item.index, name: item.name, color: item.color }))} />
-        {user.role === "ADMIN" ? (
-          <ProjectEditor
-            project={{
-              id: project.id,
-              name: project.name,
-              phase: project.phase,
-              coursesEnabled: project.coursesEnabled,
-              anomaliesEnabled: project.anomaliesEnabled,
-              leadId: project.leadId,
-              participantIds: project.participants.map((item) => item.userId),
-            }}
-            users={users.filter((person) => !person.isTest && (person.active || person.id === project.leadId || project.participants.some((item) => item.userId === person.id))).map((person) => ({ id: person.id, name: person.name }))}
-          />
-        ) : null}
-      </div>
+      <PhaseSwitch projectId={project.id} projectName={project.name} official={project.phase} phases={PHASES.map((item) => ({ index: item.index, name: item.name, color: item.color }))} />
       <section className="fiche-stats" aria-label={`Synthèse de la phase ${official.name}`}>
         <Reveal>
           <article className="dash-stat" style={{ ["--tint" as string]: "#23358E" }}>
